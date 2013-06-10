@@ -281,11 +281,11 @@ public class Server extends Parser {
 
         }
 
-        public void sessionIdle(IoSession session, IdleStatus status) {
-            if (status.equals(IdleStatus.BOTH_IDLE)) {
-                session.close(false);
-            }
-        }
+        // public void sessionIdle(IoSession session, IdleStatus status) {
+        //     if (status.equals(IdleStatus.BOTH_IDLE)) {
+        //         session.close(false);
+        //     }
+        // }
     }
 
     protected void queryReceivedByWorker(int workerId) {
