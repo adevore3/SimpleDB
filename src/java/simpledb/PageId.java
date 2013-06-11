@@ -1,7 +1,9 @@
 package simpledb;
 
+import java.io.Serializable;
+
 /** PageId is an interface to a specific page of a specific table. */
-public interface PageId {
+public interface PageId extends Serializable {
 
     /** Return a representation of this page id object as a collection of
         integers (used for logging)

@@ -1,5 +1,6 @@
 package simpledb;
 
+import java.io.Serializable;
 import java.util.*;
 
 /**
@@ -23,7 +24,9 @@ public class Join extends Operator {
 	 * @author Anton
 	 *
 	 */
-	private class HashJoin {
+	private class HashJoin implements Serializable {
+	    
+	    private static final long serialVersionUID = 1L;
 		
 		private HashMap<Field, ArrayList<Tuple>> _r1;
 		private HashMap<Field, ArrayList<Tuple>> _r2;

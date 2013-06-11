@@ -1,5 +1,8 @@
 package simpledb.parallel;
 
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import simpledb.DbException;
 import simpledb.DbIterator;
@@ -20,10 +23,17 @@ public class ShuffleConsumer extends Consumer
 {
 
     private static final long serialVersionUID = 1L;
+    
+    private transient Iterator<Tuple> _tuples;
+    
+    private transient int _innerBufferIndex;
+    private transient ArrayList<TupleBag> _innerBuffer;
 
     private DbIterator _child;
     private ParallelOperatorID _operatorID;
-    private SocketInfo[] _workers;
+    private final BitSet _workerEOS;
+    private final SocketInfo[] _workers;
+    private final HashMap<String, Integer> _workerIdToIndex;
 
     public String getName()
     {
@@ -42,6 +52,12 @@ public class ShuffleConsumer extends Consumer
         this._child = child;
         this._operatorID = operatorID;
         this._workers = workers;
+        this._workerIdToIndex = new HashMap<String, Integer>();
+        int i = 0;
+        for (SocketInfo w : workers) {
+        	this._workerIdToIndex.put(w.getId(), i++);
+        }
+        this._workerEOS = new BitSet(workers.length);
     }
 
     @Override
@@ -98,5 +114,4 @@ public class ShuffleConsumer extends Consumer
     {
         this._child = children[0];
     }
-
 }

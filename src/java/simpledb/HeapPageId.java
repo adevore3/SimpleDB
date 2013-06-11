@@ -2,6 +2,8 @@ package simpledb;
 
 /** Unique identifier for HeapPage objects. */
 public class HeapPageId implements PageId {
+
+    private static final long serialVersionUID = 1L;
 	
 	private int _tableId;
 	private int _pgNo;

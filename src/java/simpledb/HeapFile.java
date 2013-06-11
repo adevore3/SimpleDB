@@ -14,6 +14,7 @@ import java.util.*;
  */
 public class HeapFile implements DbFile
 {
+    private static final long serialVersionUID = 1L;
 
     private File _f;
     private TupleDesc _td;
@@ -176,6 +177,8 @@ public class HeapFile implements DbFile
 
     public class DbFileIter implements DbFileIterator
     {
+        private static final long serialVersionUID = 1L;
+        
         private TransactionId _tid;
         private final int _numPages;
         private int _nextPage;

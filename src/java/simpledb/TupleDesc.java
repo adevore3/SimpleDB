@@ -43,9 +43,9 @@ public class TupleDesc implements Serializable {
      *        that are included in this TupleDesc
      * */
     public Iterator<TDItem> iterator() {
-    	ArrayList<TDItem> list = new ArrayList<TDItem>(this._TDItem.length);
+    	ArrayList<TDItem> list = new ArrayList<TDItem>();
     	for (int i = 0; i < this._TDItem.length; i++)
-    		list.set(i, this._TDItem[i]);
+    		list.add(this._TDItem[i]);
     	
         return list.iterator();
     }

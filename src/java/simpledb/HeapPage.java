@@ -13,6 +13,8 @@ import java.io.*;
  */
 public class HeapPage implements Page
 {
+    private static final long serialVersionUID = 1L;
+    
     final HeapPageId pid;
     final TupleDesc td;
     final byte header[];

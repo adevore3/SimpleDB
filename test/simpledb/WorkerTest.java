@@ -31,11 +31,13 @@ import simpledb.parallel.SocketInfo;
 import simpledb.parallel.Exchange.ParallelOperatorID;
 import simpledb.systemtest.ParallelTestBase;
 
-public class WorkerTest extends ParallelTestBase {
+public class WorkerTest extends ParallelTestBase
+{
 
     @SuppressWarnings("unchecked")
     public static <P extends DbIterator> P serializePlan(P plan)
-            throws Exception {
+            throws Exception
+    {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream(baos);
         oos.writeObject(plan);
@@ -45,13 +47,17 @@ public class WorkerTest extends ParallelTestBase {
     }
 
     public void checkExchangeOperatorLocalization(DbIterator plan, Worker worker)
-            throws Exception {
+            throws Exception
+    {
         if (plan == null)
             return;
 
-        if (plan instanceof Producer) {
+        if (plan instanceof Producer)
+        {
             Assert.assertEquals(worker, ((Producer) plan).getThisWorker());
-        } else if (plan instanceof Consumer) {
+        }
+        else if (plan instanceof Consumer)
+        {
             ParallelOperatorID oid = ((Consumer) plan).getOperatorID();
             TupleBag tb = new TupleBag(oid, workers[0].getId());
             worker.inBuffer.get(oid).put(tb);
@@ -69,7 +75,8 @@ public class WorkerTest extends ParallelTestBase {
     }
 
     @Test
-    public void queryLocalizationTest() throws Exception {
+    public void queryLocalizationTest() throws Exception
+    {
         TransactionId tid = new TransactionId();
         Class<? extends PartitionFunction<?, ?>> partitionFunction = SingleFieldHashPartitionFunction.class;
         Database.getCatalog().loadSchema(this.schemaFile.getAbsolutePath());
@@ -92,25 +99,29 @@ public class WorkerTest extends ParallelTestBase {
         CollectProducer serializedMasterPlan = serializePlan(masterPlan);
         CollectProducer serializedSlavePlan = serializePlan(slavePlan);
 
-     // create a new test base
+        // create a new test base
         ParallelTestBase newTestBase = new ParallelTestBase();
         newTestBase.init();
-        
-        try {
+
+        try
+        {
             Database.getCatalog().loadSchema(
                     newTestBase.schemaFile.getAbsolutePath());
             TableStats.computeStatistics();
 
-            try {
+            try
+            {
                 Query q = new Query(tid);
                 q.setPhysicalPlan(serializedPlan);
                 /**
-                 * The query should throw an exception because the database has
-                 * completely changed, the tables in the serialized plan do not
-                 * exist (tables are identified by their ID, not their name)
+                 * The query should throw an exception because the database has completely changed,
+                 * the tables in the serialized plan do not exist (tables are identified by their
+                 * ID, not their name)
                  * */
                 q.execute();
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 Worker worker = new Worker(workers[0].getId(), server.getId());
 
                 worker.localizeQueryPlan(serializedPlan);
@@ -118,15 +129,15 @@ public class WorkerTest extends ParallelTestBase {
                 Query q = new Query(tid);
                 q.setPhysicalPlan(serializedPlan);
                 /**
-                 * now the query should work without problems, the
-                 * localizeQueryPlan method should reset the old table id with
-                 * the new id of the table with the same table name.
+                 * now the query should work without problems, the localizeQueryPlan method should
+                 * reset the old table id with the new id of the table with the same table name.
                  */
                 q.execute();
 
                 ArrayList<ParallelOperatorID> oIds = new ArrayList<ParallelOperatorID>();
                 Worker.collectConsumerOperatorIDs(serializedMasterPlan, oIds);
-                for (ParallelOperatorID id : oIds) {
+                for (ParallelOperatorID id : oIds)
+                {
                     worker.inBuffer.put(id,
                             new LinkedBlockingQueue<ExchangeMessage>());
                 }
@@ -139,13 +150,16 @@ public class WorkerTest extends ParallelTestBase {
             }
             throw new RuntimeException(
                     "Error, should not reach here. The database has completely changed all its tables although the names are still the same.");
-        } finally {
+        }
+        finally
+        {
             newTestBase.clean();
         }
     }
 
     @Test
-    public void workerQueryExecutionTest() throws Exception {
+    public void workerQueryExecutionTest() throws Exception
+    {
         System.out.println("in worker query execution test");
         TransactionId tid = new TransactionId();
         Class<? extends PartitionFunction<?, ?>> partitionFunction = SingleFieldHashPartitionFunction.class;
@@ -159,31 +173,36 @@ public class WorkerTest extends ParallelTestBase {
         localPlan.open();
         HashSet<String> tuples = new HashSet<String>();
 
-        while (localPlan.hasNext()) {
+        while (localPlan.hasNext())
+        {
             Tuple t = localPlan.next();
             tuples.add(t.toString());
         }
         localPlan.close();
 
         ParallelQueryPlan parallelPlan = ParallelQueryPlan
-                .parallelizeQueryPlan(tid, localPlan,
-                        new SocketInfo[] { workers[0] }, workers[0], server,
-                        partitionFunction);
+                .parallelizeQueryPlan(tid, localPlan, new SocketInfo[]
+                { workers[0] }, workers[0], server, partitionFunction);
 
         final CollectProducer masterPlan = parallelPlan.getMasterWorkerPlan();
 
         final ConcurrentHashMap<ParallelOperatorID, LinkedBlockingQueue<ExchangeMessage>> serverBuffer = new ConcurrentHashMap<ParallelOperatorID, LinkedBlockingQueue<ExchangeMessage>>();
         NioSocketAcceptor pseudoServer = ParallelUtility.createAcceptor();
         final Worker worker = new Worker(workers[0].getId(), server.getId());
-        try {
-            pseudoServer.setHandler(new IoHandlerAdapter() {
-                public void messageReceived(IoSession session, Object message) {
-                    if (message instanceof TupleBag) {
+        try
+        {
+            pseudoServer.setHandler(new IoHandlerAdapter()
+            {
+                public void messageReceived(IoSession session, Object message)
+                {
+                    if (message instanceof TupleBag)
+                    {
                         TupleBag tuples = (TupleBag) message;
 
                         LinkedBlockingQueue<ExchangeMessage> q = serverBuffer
                                 .get(tuples.getOperatorID());
-                        if (q == null) {
+                        if (q == null)
+                        {
                             q = new LinkedBlockingQueue<ExchangeMessage>();
                             serverBuffer.put(tuples.getOperatorID(), q);
                         }
@@ -199,59 +218,69 @@ public class WorkerTest extends ParallelTestBase {
             worker.executeQuery();
             long timeoutMS = 5 * 1000;
             long current = System.currentTimeMillis();
-            while (worker.isRunning()) {
+            while (worker.isRunning())
+            {
                 Thread.sleep(100);
                 if (System.currentTimeMillis() - current > timeoutMS)
                     break;
             }
-        } finally {
+
+            // The worker should have finished the query;
+            // Assert.assertTrue(!worker.isRunning());
+
+            HashSet<String> serverReceivedTuples = new HashSet<String>();
+            boolean seenEOS = false;
+            long start = System.currentTimeMillis();
+            getData: while (true)
+            {
+                for (ParallelOperatorID oid : serverBuffer.keySet())
+                {
+                    LinkedBlockingQueue<ExchangeMessage> q = serverBuffer
+                            .get(oid);
+                    TupleBag tb = null;
+                    while ((tb = (TupleBag) q.poll()) != null)
+                    {
+                        if (tb.isEos())
+                        {
+                            seenEOS = true;
+                            break getData;
+                        }
+                        Iterator<Tuple> it = tb.iterator();
+                        while (it.hasNext())
+                        {
+                            serverReceivedTuples.add(it.next().toString());
+                        }
+                    }
+                }
+                long end = System.currentTimeMillis();
+                if (end - start > 10 * 1000)
+                    // Receive data for at most ten seconds, if time expire, exit
+                    // directly
+                    break getData;
+                if (!seenEOS)
+                    Thread.sleep(10);
+
+            }
+
+            // EOS message should have been received
+            Assert.assertTrue(seenEOS);
+
+            // The server's received tuples should be the same as the output of the
+            // local
+            // query.
+            Assert.assertTrue(serverReceivedTuples.containsAll(tuples)
+                    && tuples.containsAll(serverReceivedTuples));
+
+            System.out.println("FInal");
+        }
+        finally
+        {
             worker.shutdown();
             System.out.println("Before unbind");
             ParallelUtility.unbind(pseudoServer);
             System.out.println("After unbind");
         }
 
-        // The worker should have finished the query;
-        Assert.assertTrue(!worker.isRunning());
-
-        HashSet<String> serverReceivedTuples = new HashSet<String>();
-        boolean seenEOS = false;
-        long start = System.currentTimeMillis();
-        getData: while (true) {
-            for (ParallelOperatorID oid : serverBuffer.keySet()) {
-                LinkedBlockingQueue<ExchangeMessage> q = serverBuffer.get(oid);
-                TupleBag tb = null;
-                while ((tb = (TupleBag) q.poll()) != null) {
-                    if (tb.isEos()) {
-                        seenEOS = true;
-                        break getData;
-                    }
-                    Iterator<Tuple> it = tb.iterator();
-                    while (it.hasNext()) {
-                        serverReceivedTuples.add(it.next().toString());
-                    }
-                }
-            }
-            long end = System.currentTimeMillis();
-            if (end - start > 10 * 1000)
-                // Receive data for at most ten seconds, if time expire, exit
-                // directly
-                break getData;
-            if (!seenEOS)
-                Thread.sleep(10);
-
-        }
-
-        // EOS message should have been received
-        Assert.assertTrue(seenEOS);
-
-        // The server's received tuples should be the same as the output of the
-        // local
-        // query.
-        Assert.assertTrue(serverReceivedTuples.containsAll(tuples)
-                && tuples.containsAll(serverReceivedTuples));
-
-        System.out.println("FInal");
     }
 
 }

@@ -8,6 +8,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.mina.core.future.IoFutureListener;
+import org.apache.mina.core.future.WriteFuture;
 import org.apache.mina.core.service.IoHandlerAdapter;
 import org.apache.mina.core.session.IoSession;
 import org.apache.mina.transport.socket.nio.NioSocketAcceptor;
@@ -187,18 +189,13 @@ public class Worker
      * operator need to be replaced by the local table. Note that Producers and Consumers also needs
      * local information.
      * */
-    public void localizeQueryPlan(DbIterator queryPlan) // TODO
+    public void localizeQueryPlan(DbIterator queryPlan)
     {
-        if (queryPlan instanceof Operator)
-            for (DbIterator c : ((Operator) queryPlan).getChildren())
-                localizeQueryPlan(c);
-
-        Catalog cat = Database.getCatalog();
         if (queryPlan instanceof SeqScan)
         {
             SeqScan ss = (SeqScan) queryPlan;
             String alias = ss.getAlias();
-            int tableid = cat.getTableId(alias);
+            int tableid = Database.getCatalog().getTableId(alias);
             ss.reset(tableid, alias);
         }
 
@@ -213,6 +210,10 @@ public class Worker
             Consumer c = (Consumer) queryPlan;
             c.setBuffer(this.inBuffer.get(c.operatorID));
         }
+        
+        if (queryPlan instanceof Operator)
+            for (DbIterator c : ((Operator) queryPlan).getChildren())
+                localizeQueryPlan(c);
     }
 
     /**
@@ -237,76 +238,32 @@ public class Worker
      * */
     public void executeQuery()
     {
-        // some code goes here
-        // Add codes to execute the query here
-        // replace the following section with your own codes
-        // *************************Start Section*************************//
         final CollectProducer originalQuery = ((CollectProducer) this.queryPlan);
-        DbIterator emptyOperator = new DbIterator()
+        Thread t = new Thread()
         {
-            private static final long serialVersionUID = 1L;
-
-            @Override
-            public void open() throws DbException, TransactionAbortedException
+            public void run()
             {
-                originalQuery.open();
-            }
-
-            @Override
-            public boolean hasNext() throws DbException,
-                    TransactionAbortedException
-            {
-                return originalQuery.hasNext();
-            }
-
-            @Override
-            public Tuple next() throws DbException,
-                    TransactionAbortedException, NoSuchElementException
-            {
-                return originalQuery.next();
-            }
-
-            @Override
-            public void rewind() throws DbException,
-                    TransactionAbortedException
-            {
-                originalQuery.rewind();
-            }
-
-            @Override
-            public TupleDesc getTupleDesc()
-            {
-                return originalQuery.getTupleDesc();
-            }
-
-            @Override
-            public void close()
-            {
-                originalQuery.close();
+                try
+                {
+                    originalQuery.open();
+                    while (originalQuery.hasNext()) {
+                        originalQuery.next();
+                    }
+                    originalQuery.close();
+                    finishQuery();
+                }
+                catch (DbException e)
+                {
+                    e.printStackTrace();
+                }
+                catch (TransactionAbortedException e)
+                {
+                    e.printStackTrace();
+                }
             }
         };
-
-        CollectProducer cp = new CollectProducer(emptyOperator,
-                originalQuery.getOperatorID(),
-                originalQuery.getCollectServerAddr());
-        cp.setThisWorker(this);
-        try
-        {
-            cp.open();
-            while (cp.hasNext())
-                cp.next();
-            cp.close();
-        }
-        catch (DbException e)
-        {
-            e.printStackTrace();
-        }
-        catch (TransactionAbortedException e)
-        {
-            e.printStackTrace();
-        }
-        this.finishQuery();
-        // *************************End Section***************************//
+        
+        t.run();
     }
 
     /**
