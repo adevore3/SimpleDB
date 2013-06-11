@@ -23,9 +23,9 @@ public class ShuffleConsumer extends Consumer
 {
 
     private static final long serialVersionUID = 1L;
-    
+
     private transient Iterator<Tuple> _tuples;
-    
+
     private transient int _innerBufferIndex;
     private transient ArrayList<TupleBag> _innerBuffer;
 
@@ -54,8 +54,9 @@ public class ShuffleConsumer extends Consumer
         this._workers = workers;
         this._workerIdToIndex = new HashMap<String, Integer>();
         int i = 0;
-        for (SocketInfo w : workers) {
-        	this._workerIdToIndex.put(w.getId(), i++);
+        for (SocketInfo w : workers)
+        {
+            this._workerIdToIndex.put(w.getId(), i++);
         }
         this._workerEOS = new BitSet(workers.length);
     }
@@ -63,25 +64,39 @@ public class ShuffleConsumer extends Consumer
     @Override
     public void open() throws DbException, TransactionAbortedException
     {
-        this._child.open();
+        this._tuples = null;
+        this._innerBuffer = new ArrayList<TupleBag>();
+        this._innerBufferIndex = 0;
+        if (this._child != null)
+            this._child.open();
+        super.open();
     }
 
     @Override
     public void rewind() throws DbException, TransactionAbortedException
     {
-        this._child.rewind();
+        this._tuples = null;
+        this._innerBufferIndex = 0;
     }
 
     @Override
     public void close()
     {
-        this._child.close();
+        super.close();
+        this.setBuffer(null);
+        this._tuples = null;
+        this._innerBufferIndex = -1;
+        this._innerBuffer = null;
+        this._workerEOS.clear();
     }
 
     @Override
     public TupleDesc getTupleDesc()
     {
-        return this._child.getTupleDesc();
+        if (this._child != null)
+            return this._child.getTupleDesc();
+
+        return null;
     }
 
     /**
@@ -93,25 +108,53 @@ public class ShuffleConsumer extends Consumer
      */
     Iterator<Tuple> getTuples() throws InterruptedException
     {
-        // some code goes here
+        TupleBag tb = null;
+        if (this._innerBufferIndex < this._innerBuffer.size())
+            return this._innerBuffer.get(this._innerBufferIndex++).iterator();
+
+        while (this._workerEOS.nextClearBit(0) < this._workers.length)
+        {
+            tb = (TupleBag) this.take(-1);
+            if (tb.isEos()) {
+                this._workerEOS.set(this._workerIdToIndex.get(tb.getWorkerID()));
+            } else {
+                this._innerBuffer.add(tb);
+                this._innerBufferIndex++;
+                return tb.iterator();
+            }
+        }
+        
         return null;
     }
 
     @Override
     protected Tuple fetchNext() throws DbException, TransactionAbortedException
     {
-        return this._child.next();
+        while (this._tuples == null || ! this._tuples.hasNext()) {
+            try {
+                this._tuples = getTuples();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                throw new DbException(e.getLocalizedMessage());
+            }
+            
+            if (this._tuples == null)
+                return null;
+        }
+        
+        return this._tuples.next();
     }
 
     @Override
     public DbIterator[] getChildren()
     {
-        return new DbIterator[] { this._child };
+        return new DbIterator[]
+        { this._child };
     }
 
     @Override
     public void setChildren(DbIterator[] children)
     {
-        this._child = children[0];
+        this._child = (CollectProducer) children[0];
     }
 }

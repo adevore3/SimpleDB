@@ -66,7 +66,6 @@ public class CollectProducer extends Producer
     {
         public void run()
         {
-
             IoSession session = ParallelUtility.createSession(
                     CollectProducer.this.collectConsumerAddr,
                     CollectProducer.this.getThisWorker().minaHandler, -1);

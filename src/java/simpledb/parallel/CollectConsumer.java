@@ -121,7 +121,6 @@ public class CollectConsumer extends Consumer {
 
 		while (this.workerEOS.nextClearBit(0) < this.sourceWorkers.length) {
 			tb = (TupleBag) this.take(-1);
-			System.out.println("Eos: " + tb.isEos());
 			if (tb.isEos()) {
 				this.workerEOS.set(this.workerIdToIndex.get(tb.getWorkerID()));
 			} else {
