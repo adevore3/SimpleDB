@@ -100,8 +100,8 @@ public class TupleDesc implements Serializable {
      *             if i is not a valid field reference.
      */
     public String getFieldName(int i) throws NoSuchElementException {
-    	if (i < 0 || i > this._TDItem.length - 1)
-    		throw new NoSuchElementException();
+    	if (i < 0 || i >= this._TDItem.length)
+    		throw new NoSuchElementException("Invalid index.");
         return this._TDItem[i].fieldName;
     }
 
@@ -116,8 +116,8 @@ public class TupleDesc implements Serializable {
      *             if i is not a valid field reference.
      */
     public Type getFieldType(int i) throws NoSuchElementException {
-    	if (i < 0 || i > this._TDItem.length - 1)
-    		throw new NoSuchElementException();
+    	if (i < 0 || i >= this._TDItem.length)
+    		throw new NoSuchElementException("Invalid index.");
         return this._TDItem[i].fieldType;
     }
 
@@ -134,7 +134,6 @@ public class TupleDesc implements Serializable {
     	if (name != null)
 	        for (int i = 0; i < this._TDItem.length; i++)
 	        	if (this._TDItem[i].fieldName != null)
-//	        		if (name.endsWith(this._TDItem[i].fieldName))
 	        		if (this._TDItem[i].fieldName.equals(name))
 	        			return i;
         throw new NoSuchElementException();

@@ -11,7 +11,6 @@ import simpledb.DbIterator;
 import simpledb.TransactionAbortedException;
 import simpledb.Tuple;
 import simpledb.TupleDesc;
-import simpledb.parallel.CollectProducer.WorkingThread;
 
 /**
  * The producer part of the Shuffle Exchange operator.

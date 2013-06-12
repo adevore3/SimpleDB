@@ -194,9 +194,9 @@ public class Worker
         if (queryPlan instanceof SeqScan)
         {
             SeqScan ss = (SeqScan) queryPlan;
-            String alias = ss.getAlias();
-            int tableid = Database.getCatalog().getTableId(alias);
-            ss.reset(tableid, alias);
+            String name = ss.getTableName();
+            int tableid = Database.getCatalog().getTableId(name);
+            ss.reset(tableid, name);
         }
 
         if (queryPlan instanceof Producer)
