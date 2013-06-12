@@ -122,7 +122,8 @@ public class CollectProducer extends Producer
                                 ParallelUtility.closeSession(future
                                         .getSession());
                             }
-                        });// .awaitUninterruptibly(); //wait until all the data have successfully
+                        });// .awaitUninterruptibly();
+                           // wait until all the data have successfully
                            // transfered
             }
             catch (DbException e)

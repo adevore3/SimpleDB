@@ -52,7 +52,7 @@ public class ParallelAggregateTest extends ParallelTestBase {
         Assert.assertTrue(downAgg.groupField() == Aggregator.NO_GROUPING);
         Assert.assertTrue(downAgg.aggregateOp() == downOp);
         Assert.assertTrue(downAgg.aggregateField() == noGroupAgg.aggregateField());
-        Assert.assertTrue(re.getTupleDesc().getFieldName(0) == noGroupAgg.aggregateFieldName());
+        Assert.assertTrue(re.getTupleDesc().getFieldName(0).equals(noGroupAgg.aggregateFieldName()));
 
         DbIterator group = p.generateLogicalPlan(tid,
                 "select name,"+agg+"(id) from student group by name;")
@@ -80,8 +80,8 @@ public class ParallelAggregateTest extends ParallelTestBase {
         Assert.assertTrue(downAgg.groupField() == groupAgg.groupField());
         Assert.assertTrue(downAgg.aggregateOp() == downOp);
         Assert.assertTrue(downAgg.aggregateField() == groupAgg.aggregateField());
-        Assert.assertTrue(re.getTupleDesc().getFieldName(1) == groupAgg.aggregateFieldName());
-        Assert.assertTrue(re.getTupleDesc().getFieldName(0) == groupAgg.groupFieldName());
+        Assert.assertEquals(re.getTupleDesc().getFieldName(1), groupAgg.aggregateFieldName());
+        Assert.assertEquals(re.getTupleDesc().getFieldName(0), groupAgg.groupFieldName());
     }
     
     @Test

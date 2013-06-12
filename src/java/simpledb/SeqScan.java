@@ -76,6 +76,7 @@ public class SeqScan implements DbIterator {
         this._tableid = tableid;
         this._tableAlias = tableAlias;
         this._tupleIt = Database.getCatalog().getDbFile(this._tableid).iterator(this._tid);
+        this._td = Database.getCatalog().getTupleDesc(this._tableid);
     }
 
     public SeqScan(TransactionId tid, int tableid) {

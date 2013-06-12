@@ -13,38 +13,40 @@ import simpledb.TransactionId;
 /**
  * Optimize aggregate operators of a parallel queryplan.
  * 
- * Each aggregate operator within an un-optimized parallel query plan will be
- * replaced by two aggregate operators, a down-stream aggregate operator and an
- * up-stream aggregate operator.
+ * Each aggregate operator within an un-optimized parallel query plan will be replaced by two
+ * aggregate operators, a down-stream aggregate operator and an up-stream aggregate operator.
  * 
  * For example, max(column) will be replace by
  * 
  * max(column) -> (shuffle/collect) -> max(column)
  * 
- * In this way, the amount of data that need to be transmitted though network
- * will be minimized.
+ * In this way, the amount of data that need to be transmitted though network will be minimized.
  * */
-public class AggregateOptimizer extends ParallelQueryPlanOptimizer {
+public class AggregateOptimizer extends ParallelQueryPlanOptimizer
+{
 
-    public AggregateOptimizer() {
+    public AggregateOptimizer()
+    {
         super();
     }
 
-    public AggregateOptimizer(ParallelQueryPlanOptimizer next) {
+    public AggregateOptimizer(ParallelQueryPlanOptimizer next)
+    {
         super(next);
     }
 
     @Override
-    protected void doMyOptimization(TransactionId tid, ParallelQueryPlan plan) {
+    protected void doMyOptimization(TransactionId tid, ParallelQueryPlan plan)
+    {
         plan.setMasterWorkerPlan((CollectProducer) parallelizeAggregate(plan
                 .getMasterWorkerPlan()));
     }
 
     /**
-     * Replace the aggregate operators in the local query plan with parallelized
-     * aggregate
+     * Replace the aggregate operators in the local query plan with parallelized aggregate
      * */
-    protected DbIterator parallelizeAggregate(DbIterator root) {
+    protected DbIterator parallelizeAggregate(DbIterator root)
+    {
 
         if (!(root instanceof Operator))
             return root;
@@ -52,7 +54,8 @@ public class AggregateOptimizer extends ParallelQueryPlanOptimizer {
         Operator rootO = (Operator) root;
         DbIterator[] children = rootO.getChildren();
 
-        if (rootO instanceof Aggregate) {
+        if (rootO instanceof Aggregate)
+        {
             Aggregate agg = (Aggregate) rootO;
             Exchange shuffleConsumerOrCollectConsumer = (Exchange) children[0];
             Exchange shuffleProducerOrCollectProducer = (Exchange) shuffleConsumerOrCollectConsumer
@@ -60,8 +63,8 @@ public class AggregateOptimizer extends ParallelQueryPlanOptimizer {
 
             DbIterator downChildProcessed = parallelizeAggregate(shuffleProducerOrCollectProducer
                     .getChildren()[0]);
-            shuffleProducerOrCollectProducer
-                    .setChildren(new DbIterator[] { downChildProcessed });
+            shuffleProducerOrCollectProducer.setChildren(new DbIterator[]
+            { downChildProcessed });
 
             Op aop = agg.aggregateOp();
             Aggregate downAgg = agg;
@@ -69,7 +72,8 @@ public class AggregateOptimizer extends ParallelQueryPlanOptimizer {
 
             boolean hasGroup = agg.groupField() != Aggregator.NO_GROUPING;
 
-            switch (aop) {
+            switch (aop)
+            {
             /**
              * replace AVG with SUM_COUNT -> SC_AVG
              * */
@@ -77,8 +81,8 @@ public class AggregateOptimizer extends ParallelQueryPlanOptimizer {
                 downAgg = new Aggregate(downChildProcessed,
                         agg.aggregateField(), agg.groupField(),
                         Aggregator.Op.SUM_COUNT);
-                shuffleProducerOrCollectProducer
-                        .setChildren(new DbIterator[] { downAgg });
+                shuffleProducerOrCollectProducer.setChildren(new DbIterator[]
+                { downAgg });
                 upAgg = new Aggregate(shuffleConsumerOrCollectConsumer,
                         hasGroup ? 1 : 0,
                         hasGroup ? 0 : Aggregator.NO_GROUPING,
@@ -88,25 +92,49 @@ public class AggregateOptimizer extends ParallelQueryPlanOptimizer {
              * replace SUM with SUM -> SUM
              * */
             case SUM:
-                /**
-                 * replace COUNT with COUNT -> SUM
-                 * */
+                downAgg.setChildren(new DbIterator[]
+                { downChildProcessed });
+                shuffleProducerOrCollectProducer.setChildren(new DbIterator[]
+                { downAgg });
+                upAgg = new Aggregate(shuffleConsumerOrCollectConsumer,
+                        hasGroup ? 1 : 0,
+                        hasGroup ? 0 : Aggregator.NO_GROUPING,
+                        Aggregator.Op.SUM);
+                break;
+            /**
+             * replace COUNT with COUNT -> SUM
+             * */
             case COUNT:
-                // some code goes here
+                downAgg.setChildren(new DbIterator[]
+                { downChildProcessed });
+                shuffleProducerOrCollectProducer.setChildren(new DbIterator[]
+                { downAgg });
+                upAgg = new Aggregate(shuffleConsumerOrCollectConsumer,
+                        hasGroup ? 1 : 0,
+                        hasGroup ? 0 : Aggregator.NO_GROUPING,
+                        Aggregator.Op.COUNT);
                 break;
             /**
              * replace MIN with MIN -> MIN
              * */
             case MIN:
-                // some code goes here
+                downAgg.setChildren(new DbIterator[]
+                { downChildProcessed });
+                shuffleProducerOrCollectProducer.setChildren(new DbIterator[]
+                { downAgg });
+                upAgg = new Aggregate(shuffleConsumerOrCollectConsumer,
+                        hasGroup ? 1 : 0,
+                        hasGroup ? 0 : Aggregator.NO_GROUPING,
+                        Aggregator.Op.MIN);
                 break;
             /**
              * replace MAX with MAX -> MAX
              * */
             case MAX:
-                downAgg.setChildren(new DbIterator[] { downChildProcessed });
-                shuffleProducerOrCollectProducer
-                        .setChildren(new DbIterator[] { downAgg });
+                downAgg.setChildren(new DbIterator[]
+                { downChildProcessed });
+                shuffleProducerOrCollectProducer.setChildren(new DbIterator[]
+                { downAgg });
                 upAgg = new Aggregate(shuffleConsumerOrCollectConsumer,
                         hasGroup ? 1 : 0,
                         hasGroup ? 0 : Aggregator.NO_GROUPING,
@@ -115,22 +143,27 @@ public class AggregateOptimizer extends ParallelQueryPlanOptimizer {
             }
 
             /**
-             * Add a rename operator to keep the output TupleDesc consistent
-             * with the local plan
+             * Add a rename operator to keep the output TupleDesc consistent with the local plan
              * */
             return new Rename(hasGroup ? 1 : 0, agg.aggregateFieldName(), upAgg);
-        } else {
-            if (rootO instanceof Join || rootO instanceof HashEquiJoin) {
+        }
+        else
+        {
+            if (rootO instanceof Join || rootO instanceof HashEquiJoin)
+            {
                 DbIterator child1 = parallelizeAggregate(children[0]);
                 DbIterator child2 = parallelizeAggregate(children[1]);
-                rootO.setChildren(new DbIterator[] { child1, child2 });
+                rootO.setChildren(new DbIterator[]
+                { child1, child2 });
                 return rootO;
-            } else {
+            }
+            else
+            {
                 DbIterator child = parallelizeAggregate(children[0]);
-                rootO.setChildren(new DbIterator[] { child });
+                rootO.setChildren(new DbIterator[]
+                { child });
                 return rootO;
             }
         }
-
     }
 }

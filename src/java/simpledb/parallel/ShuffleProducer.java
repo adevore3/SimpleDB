@@ -141,9 +141,9 @@ public class ShuffleProducer extends Producer
                                     ParallelUtility.closeSession(future
                                             .getSession());
                                 }
-                            });// .awaitUninterruptibly(); //wait until all the data have
-                               // successfully
-                               // transfered
+                            });// .awaitUninterruptibly();
+                               // wait until all the data have
+                               // successfully transfered
                 }
             }
             catch (DbException e)

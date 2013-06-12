@@ -294,7 +294,7 @@ public class Join extends Operator {
      *       alias or table name.
      * */
     public String getJoinField2Name() {
-        return this._child2.getTupleDesc().getFieldName(this._p.getField1());
+        return this._child2.getTupleDesc().getFieldName(this._p.getField2());
     }
 
     /**
