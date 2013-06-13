@@ -73,7 +73,6 @@ public class Rename extends Operator {
 
     @Override
     public TupleDesc getTupleDesc() {
-
         return this.td;
     }
     
