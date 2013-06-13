@@ -34,6 +34,7 @@ public class ShuffleConsumer extends Consumer
     private final BitSet _workerEOS;
     private final SocketInfo[] _workers;
     private final HashMap<String, Integer> _workerIdToIndex;
+    private TupleDesc _td;
 
     public String getName()
     {
@@ -59,6 +60,7 @@ public class ShuffleConsumer extends Consumer
             this._workerIdToIndex.put(w.getId(), i++);
         }
         this._workerEOS = new BitSet(workers.length);
+        this.updateTD();
     }
 
     @Override
@@ -93,10 +95,19 @@ public class ShuffleConsumer extends Consumer
     @Override
     public TupleDesc getTupleDesc()
     {
+        TupleDesc td;
         if (this._child != null)
-            return this._child.getTupleDesc();
-
-        return null;
+            td = this._child.getTupleDesc();
+        else
+            td = this._td;
+        
+        System.out.println("\nShuffleConsumer td: " + td);
+        return td;
+    }
+    
+    private void updateTD() {
+        if (this._child != null)
+            this._td = this._child.getTupleDesc();
     }
 
     /**
@@ -156,5 +167,6 @@ public class ShuffleConsumer extends Consumer
     public void setChildren(DbIterator[] children)
     {
         this._child = (CollectProducer) children[0];
+        this.updateTD();
     }
 }
